@@ -1,8 +1,8 @@
-package server
+package main
 
 import (
-	"GinIM/user"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 )
@@ -13,7 +13,7 @@ type Server struct {
 	Port int
 
 	// 在线用户的列表
-	OnlineMap map[string]*user.User
+	OnlineMap map[string]*User
 	mapLock   sync.RWMutex
 
 	// 消息广播的channle
@@ -25,7 +25,7 @@ func NewServer(ip string, port int) *Server {
 	server := &Server{
 		Ip:        ip,
 		Port:      port,
-		OnlineMap: make(map[string]*user.User),
+		OnlineMap: make(map[string]*User),
 		Message:   make(chan string),
 	}
 
@@ -35,15 +35,31 @@ func NewServer(ip string, port int) *Server {
 func (s *Server) Handler(conn net.Conn) {
 	fmt.Println("链接建立成功~~~")
 
-	user := user.NewUser(conn)
+	user := NewUser(conn,s)
 
-	// 用户上线,将用户加入onlineMap中
-	s.mapLock.Lock()
-	s.OnlineMap[user.Name] = user
-	s.mapLock.Unlock()
+	user.Online()
 
-	// 广播当前用户上线消息
-	s.Broadcast(user, "已上线")
+	// 接收客户端发送的消息
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n, err := conn.Read(buf)
+			// 若读取的字节数为0，默认值
+			if n == 0 {
+				user.Offline()
+				return
+			}
+			if err != nil && err != io.EOF {
+				fmt.Println("Conn Read err:", err)
+				return
+			}
+			// 提取用户的消息（去除'\n'）
+			msg:=string(buf[:n-1])
+
+			// 用户针对msg进行消息处理
+			user.DoMessage(msg)
+		}
+	}()
 
 	// 当前handler阻塞
 	select {}
@@ -65,7 +81,7 @@ func (s *Server) ListenMessage() {
 }
 
 // 广播消息的方法
-func (s *Server) Broadcast(user *user.User, msg string) {
+func (s *Server) Broadcast(user *User, msg string) {
 	sendMsg := "[" + user.Addr + "]" + user.Name + ":" + msg
 	s.Message <- sendMsg
 }

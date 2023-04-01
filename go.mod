@@ -1,3 +1,3 @@
-module GinIM
+module GoIM
 
 go 1.19
