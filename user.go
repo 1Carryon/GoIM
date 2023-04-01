@@ -99,7 +99,7 @@ func (u *User) DoMessage(msg string) {
 		// 2.根据用户名获取对方User对象
 		remoteUser, ok := u.server.OnlineMap[remoteName]
 		if !ok {
-			u.SendMsg("改用户名不存在~~\n")
+			u.SendMsg("该用户名不存在~~\n")
 			return
 		}
 
