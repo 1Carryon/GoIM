@@ -35,7 +35,7 @@ func NewServer(ip string, port int) *Server {
 func (s *Server) Handler(conn net.Conn) {
 	fmt.Println("链接建立成功~~~")
 
-	user := NewUser(conn,s)
+	user := NewUser(conn, s)
 
 	user.Online()
 
@@ -54,12 +54,15 @@ func (s *Server) Handler(conn net.Conn) {
 				return
 			}
 			// 提取用户的消息（去除'\n'）
-			msg:=string(buf[:n-1])
+			msg := string(buf[:n-1])
 
 			// 用户针对msg进行消息处理
 			user.DoMessage(msg)
 		}
 	}()
+
+	// 查看OnlineMap
+	// fmt.Printf("%+v\n", s.OnlineMap)
 
 	// 当前handler阻塞
 	select {}
