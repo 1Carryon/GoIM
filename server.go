@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"runtime"
 	"sync"
+	"time"
 )
 
 // 创建一个server对象
@@ -39,6 +41,9 @@ func (s *Server) Handler(conn net.Conn) {
 
 	user.Online()
 
+	//监听用户是否活跃的channel
+	isLive := make(chan bool)
+
 	// 接收客户端发送的消息
 	go func() {
 		buf := make([]byte, 4096)
@@ -58,6 +63,9 @@ func (s *Server) Handler(conn net.Conn) {
 
 			// 用户针对msg进行消息处理
 			user.DoMessage(msg)
+
+			// 用户的任意消息，都代表当前用户时活跃的
+			isLive <- true
 		}
 	}()
 
@@ -65,7 +73,21 @@ func (s *Server) Handler(conn net.Conn) {
 	// fmt.Printf("%+v\n", s.OnlineMap)
 
 	// 当前handler阻塞
-	select {}
+	for {
+		select {
+		case <-isLive:
+		case <-time.After(time.Minute * 30):
+			// 已经超时，将当前的User强制关闭
+			user.SendMsg("你被踢了")
+			// 销毁channle资源
+			close(user.C)
+			// 关闭连接
+			conn.Close()
+			// 退出当前handler
+			// return
+			runtime.Goexit()
+		}
+	}
 
 }
 
