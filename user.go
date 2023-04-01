@@ -92,6 +92,26 @@ func (u *User) DoMessage(msg string) {
 			u.Name = newName
 			u.SendMsg("您已更新用户名：" + u.Name + "\n")
 		}
+	} else if len(msg) > 4 && msg[:3] == "to|" {
+		// 消息格式：to|zhangshang|消息内容
+		// 1.获取对方的用户名
+		remoteName := strings.Split(msg, "|")[1]
+		// 2.根据用户名获取对方User对象
+		remoteUser, ok := u.server.OnlineMap[remoteName]
+		if !ok {
+			u.SendMsg("改用户名不存在~~\n")
+			return
+		}
+
+		// 3.通过对方User对象将消息内容发送过去
+		content := strings.Split(msg, "|")[2]
+		if content == "" {
+			u.SendMsg("无有效信息，请重新发送\n")
+			return
+		}
+
+		remoteUser.SendMsg(u.Name + "对你说：" + content)
+
 	} else {
 		u.server.Broadcast(u, msg)
 	}
